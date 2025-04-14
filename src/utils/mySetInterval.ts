@@ -11,20 +11,40 @@ export const mySetInterval = (
     ms: number,
     options: { immediate?: boolean } = { immediate: false }
 ) => {
-    let timeoutId: number
+    if (ms <= 0) {
+        throw new Error('时间间隔必须大于0')
+    }
+
+    let timeoutId: number | undefined
+    let isRunning = true
+
     const excute = () => {
-        if (timeoutId) {
-            clearTimeout(timeoutId)
-        }
+        if (!isRunning) return
         try {
             cb()
-            timeoutId = setTimeout(excute, ms)
         } catch (e) {
-            console.error(e)
+            console.error('定时器回调执行出错:', e)
+        }
+        // 只有当isRunning为true时才继续设置下一个定时器
+        if (isRunning) {
+            timeoutId = window.setTimeout(excute, ms)
         }
     }
+    // 立即执行或设置第一个定时器
     if (options?.immediate) {
-        cb()
-    } else timeoutId = setTimeout(excute, ms)
-    return () => clearTimeout(timeoutId)
+        try {
+            cb()
+        } catch (e) {
+            console.error('定时器初始回调执行出错:', e)
+        }
+        timeoutId = window.setTimeout(excute, ms)
+    } else timeoutId = window.setTimeout(excute, ms)
+    // 返回清理函数
+    return () => {
+        isRunning = false
+        if (timeoutId !== undefined) {
+            window.clearTimeout(timeoutId)
+            timeoutId = undefined
+        }
+    }
 }
