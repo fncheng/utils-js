@@ -10,7 +10,12 @@ export const mySetInterval = (
     cb: () => void,
     ms: number,
     options: { immediate?: boolean } = { immediate: false }
-) => {
+): (() => void) => {
+    if (typeof window === 'undefined') {
+        console.warn('loopSetInterval: 在非浏览器环境中无效')
+        return () => {}
+    }
+
     if (ms <= 0) {
         throw new Error('时间间隔必须大于0')
     }
@@ -18,7 +23,7 @@ export const mySetInterval = (
     let timeoutId: number | undefined
     let isRunning = true
 
-    const excute = () => {
+    const execute = () => {
         if (!isRunning) return
         try {
             cb()
@@ -27,18 +32,18 @@ export const mySetInterval = (
         }
         // 只有当isRunning为true时才继续设置下一个定时器
         if (isRunning) {
-            timeoutId = window.setTimeout(excute, ms)
+            timeoutId = window.setTimeout(execute, ms)
         }
     }
-    // 立即执行或设置第一个定时器
-    if (options?.immediate) {
+    if (options.immediate) {
         try {
             cb()
-        } catch (e) {
-            console.error('定时器初始回调执行出错:', e)
+        } catch (error) {
+            console.error('loopSetInterval: 初始回调执行出错', error)
         }
-        timeoutId = window.setTimeout(excute, ms)
-    } else timeoutId = window.setTimeout(excute, ms)
+    }
+
+    timeoutId = window.setTimeout(execute, ms)
     // 返回清理函数
     return () => {
         isRunning = false
